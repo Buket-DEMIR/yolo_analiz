@@ -1,116 +1,3 @@
-import cv2
-import os
-from ultralytics import YOLO
-
-print(">>> Program baslatiliyor, lütfen bekleyin...")
-
-# Bilgisayarında hazır olan güçlü YOLO modelini kullanıyoruz
-model = YOLO("yolo26l.pt")
-
-video_yolu = "WhatsApp Video 2026-06-26 at 02.22.54.mp4"
-cikti_yolu = "analiz_cinsiyet_ve_yas.avi"
-
-if not os.path.exists(video_yolu):
-    print(f"Uyarı: '{video_yolu}' bulunamadı. Sunucu aktif tutuluyor...")
-    import time
-    while True:
-        time.sleep(3600)
-
-cap = cv2.VideoCapture(video_yolu)
-width  = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-fps    = int(cap.get(cv2.CAP_PROP_FPS))
-
-fourcc = cv2.VideoWriter_fourcc(*'XVID')
-out = cv2.VideoWriter(cikti_yolu, fourcc, fps, (width, height))
-
-print(">>> Video açıldı. Düzeltilmiş Cinsiyet ve Yaş Analizi Başlıyor...")
-
-frame_count = 0
-while cap.isOpened():
-    ret, frame = cap.read()
-    if not ret:
-        break
-
-    frame_count += 1
-    
-    # Modelin tüm nesneleri analiz etmesini sağlıyoruz
-    results = model(frame, verbose=False)
-    
-    insanlar = []
-    kadin_isaretleri = 0
-    erkek_isaretleri = 0
-    genc_isaretleri = 0   
-    yetiskin_isaretleri = 0 
-    
-    for result in results:
-        boxes = result.boxes
-        for box in boxes:
-            cls_id = int(box.cls[0])
-            label = model.names[cls_id].lower()
-            
-            if cls_id == 0:
-                insanlar.append(box)
-            
-            # Cinsiyet ipuçları
-            if label in ["handbag", "skirt", "dress", "hair dryer"]:
-                kadin_isaretleri += 1
-            if label in ["tie", "necktie", "razor"]:
-                erkek_isaretleri += 1
-                
-            # Yaş ipuçları
-            if label in ["backpack", "sports ball", "skateboard"]:
-                genc_isaretleri += 1
-            if label in ["suitcase", "tie", "necktie"]:
-                yetiskin_isaretleri += 1
-
-    for box in insanlar:
-        x1, y1, x2, y2 = map(int, box.xyxy[0])
-        conf = float(box.conf[0])
-        
-        en = x2 - x1
-        boy = y2 - y1
-        oran = en / boy if boy > 0 else 0
-        
-        # 1. CİNSİYET KARARI (Hatalı kısım düzeltildi)
-        if kadin_isaretleri > 0 or erkek_isaretleri > 0:
-            if kadin_isaretleri > erkek_isaretleri:
-                cinsiyet_yazisi = "Kadin"
-            else:
-                cinsiyet_yazisi = "Erkek"
-        else:
-            cinsiyet_yazisi = "Erkek" if oran > 0.40 else "Kadin"
-            
-        # 2. YAŞ KARARI
-        if genc_isaretleri > yetiskin_isaretleri:
-            yas_yazisi = "Genc (18-25)"
-        elif yetiskin_isaretleri > genc_isaretleri:
-            yas_yazisi = "Yetiskin (26-45)"
-        else:
-            if boy < height * 0.35: 
-                yas_yazisi = "Cocuk/Genc"
-            elif boy > height * 0.70:
-                yas_yazisi = "Yetiskin (26-45)"
-            else:
-                yas_yazisi = "Genc (18-25)"
-
-        # Çizim ve Etiketleme
-        etiket = f"{cinsiyet_yazisi} | {yas_yazisi}"
-        
-        cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 165), 2) 
-        cv2.rectangle(frame, (x1, y1 - 30), (x1 + 220, y1), (255, 0, 165), -1)
-        cv2.putText(frame, etiket, (x1 + 5, y1 - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
-
-    out.write(frame)
-    
-    if frame_count % 10 == 0:
-        print(f"İşlenen Kare Sayısı: {frame_count}")
-
-cap.release()
-out.release()
-cv2.destroyAllWindows()
-
-print(f"\n>>> Düzeltme başarılı! Çıktı '{cikti_yolu}' adıyla kaydedildi.")
 import os
 import cv2
 from flask import Flask, render_template_string
@@ -118,31 +5,36 @@ from ultralytics import YOLO
 
 app = Flask(__name__)
 
-# YOLO Modelini yükle
+# YOLO modelini başlatıyoruz
 model = YOLO("yolo26l.pt")
 
-@app.route("/")
-def home():
-    return """
-    <div style='text-align: center; margin-top: 50px; font-family: sans-serif;'>
-        <h1>YOLOv11 Analiz Servisi Aktif! 🚀</h1>
-        <p>Model başarıyla yüklendi ve sunucu çalışıyor.</p>
+HTML_TEMPLATE = """
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>YOLO Analiz Servisi</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; background-color: #121212; color: #fff; padding-top: 50px; }
+        .card { background-color: #1e1e1e; display: inline-block; padding: 40px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        h1 { color: #00d26a; }
+        p { color: #bbb; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>YOLO Analiz Servisi Aktif! 🚀</h1>
+        <p>Model başarıyla yüklendi ve web sunucusu yayında.</p>
     </div>
-    """
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
-    import os
-from flask import Flask
-
-app = Flask(__name__)
+</body>
+</html>
+"""
 
 @app.route("/")
 def home():
-    return "<h1>YOLO Analiz Servisi Aktif! 🚀</h1>"
+    return render_template_string(HTML_TEMPLATE)
 
 if __name__ == "__main__":
-    # Render'ın atadığı portu alıyoruz (Varsayılan 5000)
+    # Render'ın dinamik atadığı PORT değişkenini alıyoruz
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
