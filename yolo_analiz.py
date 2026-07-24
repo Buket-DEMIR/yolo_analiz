@@ -11,8 +11,10 @@ video_yolu = "WhatsApp Video 2026-06-26 at 02.22.54.mp4"
 cikti_yolu = "analiz_cinsiyet_ve_yas.avi"
 
 if not os.path.exists(video_yolu):
-    print(f"Hata: Klasörde '{video_yolu}' adında bir video bulunamadı!")
-    exit()
+    print(f"Uyarı: '{video_yolu}' bulunamadı. Sunucu aktif tutuluyor...")
+    import time
+    while True:
+        time.sleep(3600)
 
 cap = cv2.VideoCapture(video_yolu)
 width  = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
