@@ -111,3 +111,25 @@ out.release()
 cv2.destroyAllWindows()
 
 print(f"\n>>> Düzeltme başarılı! Çıktı '{cikti_yolu}' adıyla kaydedildi.")
+import os
+import cv2
+from flask import Flask, render_template_string
+from ultralytics import YOLO
+
+app = Flask(__name__)
+
+# YOLO Modelini yükle
+model = YOLO("yolo26l.pt")
+
+@app.route("/")
+def home():
+    return """
+    <div style='text-align: center; margin-top: 50px; font-family: sans-serif;'>
+        <h1>YOLOv11 Analiz Servisi Aktif! 🚀</h1>
+        <p>Model başarıyla yüklendi ve sunucu çalışıyor.</p>
+    </div>
+    """
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
