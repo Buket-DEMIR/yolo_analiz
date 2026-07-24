@@ -133,3 +133,16 @@ def home():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+    import os
+from flask import Flask
+
+app = Flask(__name__)
+
+@app.route("/")
+def home():
+    return "<h1>YOLO Analiz Servisi Aktif! 🚀</h1>"
+
+if __name__ == "__main__":
+    # Render'ın atadığı portu alıyoruz (Varsayılan 5000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
