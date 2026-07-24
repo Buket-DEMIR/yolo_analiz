@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yönetim Paneli</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <!-- Üst Menü / Navbar -->
+    <nav class="navbar navbar-dark bg-dark mb-4 shadow-sm">
+        <div class="container">
+            <span class="navbar-brand fw-bold">🛡️ Yetkili Kullanıcı Yönetim Paneli</span>
+            <a href="/logout" class="btn btn-outline-danger btn-sm fw-bold">Güvenli Çıkış</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Bildirim Mesajları -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="row g-4">
+            <!-- Sol Sütun: Yeni Kullanıcı Ekleme Formu -->
+            <div class="col-md-4">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-primary text-white fw-bold">Yeni Kullanıcı Oluştur</div>
+                    <div class="card-body">
+                        <form action="/user/add" method="POST">
+                            <div class="mb-2">
+                                <label class="small text-muted fw-bold">E-Posta</label>
+                                <input type="email" name="email" class="form-control form-control-sm" required autocomplete="off">
+                            </div>
+                            <div class="mb-2">
+                                <label class="small text-muted fw-bold">Şifre</label>
+                                <input type="password" name="password" class="form-control form-control-sm" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="small text-muted fw-bold">Telefon Numarası</label>
+                                <input type="text" name="phone" class="form-control form-control-sm" placeholder="0555..." required>
+                            </div>
+                            <button type="submit" class="btn btn-success btn-sm w-100 fw-bold">Güvenli Kaydet</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sağ Sütun: Kullanıcı Listesi ve Dinamik Şifre Yönetimi -->
+            <div class="col-md-8">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-dark text-white fw-bold">Kullanıcı Yönetim Listesi</div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>E-Posta</th>
+                                        <th>Telefon</th>
+                                        <th>Dinamik Şifre Güncelle</th>
+                                        <th class="text-center">İşlem</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for user in users %}
+                                    <tr>
+                                        <td><span class="fw-bold text-dark">{{ user.email }}</span></td>
+                                        <td><span class="text-muted small">{{ user.phone }}</span></td>
+                                        <td>
+                                            <!-- Şifre Değiştirme Formu -->
+                                            <form action="/user/update_password" method="POST" class="d-flex gap-1">
+                                                <input type="hidden" name="email" value="{{ user.email }}">
+                                                <input type="password" name="password" placeholder="Yeni Şifre" class="form-control form-control-sm" required style="max-width: 140px;">
+                                                <button type="submit" class="btn btn-warning btn-sm fw-bold text-white">Değiştir</button>
+                                            </form>
+                                        </td>
+                                        <td class="text-center">
+                                            <a href="/user/delete/{{ user.email }}" class="btn btn-danger btn-sm fw-bold" onclick="return confirm('Bu kullanıcıyı sistemden tamamen silmek istediğinize emin misiniz?')">Sil</a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                    {% if not users %}
+                                    <tr>
+                                        <td colspan="4" class="text-center text-muted py-3">Sistemde kayıtlı kullanıcı bulunmamaktadır.</td>
+                                    </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

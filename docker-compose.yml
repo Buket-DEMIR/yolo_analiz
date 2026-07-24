@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: panel_postgres_db
+    environment:
+      POSTGRES_USER: panel_admin
+      POSTGRES_PASSWORD: CokGuvenliDbSifresi2026!
+      POSTGRES_DB: panel_yonetim
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  web:
+    build: .
+    container_name: panel_web_app
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+    environment:
+      - FLASK_ENV=production
+      - SECRET_KEY=CokGizliVeGuvenliBirAnahtar123!
+      - DB_HOST=db
+      - DB_NAME=panel_yonetim
+      - DB_USER=panel_admin
+      - DB_PASSWORD=CokGuvenliDbSifresi2026!
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:
