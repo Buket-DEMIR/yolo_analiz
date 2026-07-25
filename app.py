@@ -35,7 +35,11 @@ app.register_blueprint(auth_bp, url_prefix='/api/auth')
 app.register_blueprint(admin_bp, url_prefix='/api/admin')
 
 # Veritabanını başlat
-init_db()
+try:
+    init_db()
+except Exception as e:
+    print(f"⚠️ Veritabanı başlatılamadı: {e}")
+    print("🔧 DATABASE_URL kontrol edin!")
 
 # Ana sayfa
 @app.route('/')
@@ -47,7 +51,7 @@ def home():
 def health():
     return jsonify({"status": "healthy", "message": "Admin Panel API Çalışıyor!"})
 
-# ⭐ BURAYI EKLE ⭐
+# Dashboard sayfası
 @app.route('/dashboard')
 def dashboard():
     return render_template('dashboard.html')

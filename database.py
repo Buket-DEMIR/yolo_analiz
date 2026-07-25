@@ -3,68 +3,82 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import bcrypt
 from datetime import datetime
+import re
 
 def get_db_connection():
-    """Veritabanı bağlantısı oluştur"""
-    return psycopg2.connect(
-        host=os.getenv('DB_HOST', 'localhost'),
-        database=os.getenv('DB_NAME', 'yolo_userdb'),
-        user=os.getenv('DB_USER', 'admin'),
-        password=os.getenv('DB_PASSWORD', 'gucluSifre123'),
-        cursor_factory=RealDictCursor
-    )
+    """Veritabanı bağlantısı oluştur - Render için"""
+    database_url = os.getenv('DATABASE_URL')
+    
+    if database_url:
+        # Render PostgreSQL bağlantısı
+        print(f"✅ Render PostgreSQL kullanılıyor")
+        return psycopg2.connect(database_url, cursor_factory=RealDictCursor)
+    else:
+        # Yerel geliştirme için
+        print(f"✅ Yerel PostgreSQL kullanılıyor")
+        return psycopg2.connect(
+            host=os.getenv('DB_HOST', 'localhost'),
+            database=os.getenv('DB_NAME', 'yolo_userdb'),
+            user=os.getenv('DB_USER', 'postgres'),
+            password=os.getenv('DB_PASSWORD', 'postgres'),
+            cursor_factory=RealDictCursor
+        )
 
 def init_db():
     """Veritabanı tablolarını oluştur"""
-    conn = get_db_connection()
-    cur = conn.cursor()
-    
-    # Users tablosu
-    cur.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id SERIAL PRIMARY KEY,
-            email VARCHAR(255) UNIQUE NOT NULL,
-            password_hash VARCHAR(255) NOT NULL,
-            phone VARCHAR(20),
-            is_admin BOOLEAN DEFAULT FALSE,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            last_login TIMESTAMP,
-            is_active BOOLEAN DEFAULT TRUE
-        )
-    ''')
-    
-    # Login logları (güvenlik için)
-    cur.execute('''
-        CREATE TABLE IF NOT EXISTS login_logs (
-            id SERIAL PRIMARY KEY,
-            user_id INTEGER REFERENCES users(id),
-            ip_address VARCHAR(45),
-            user_agent TEXT,
-            login_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            success BOOLEAN
-        )
-    ''')
-    
-    # Admin kullanıcıyı oluştur (yoksa)
-    admin_email = os.getenv('ADMIN_EMAIL', 'admin@yolo.com')
-    admin_password = os.getenv('ADMIN_PASSWORD', 'Admin123!')
-    
-    cur.execute("SELECT id FROM users WHERE email = %s", (admin_email,))
-    admin_exists = cur.fetchone()
-    
-    if not admin_exists:
-        hashed = bcrypt.hashpw(admin_password.encode('utf-8'), bcrypt.gensalt())
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # Users tablosu
         cur.execute('''
-            INSERT INTO users (email, password_hash, is_admin)
-            VALUES (%s, %s, %s)
-        ''', (admin_email, hashed.decode('utf-8'), True))
-        print(f"✅ Admin kullanıcı oluşturuldu: {admin_email}")
-    
-    conn.commit()
-    cur.close()
-    conn.close()
-    print("✅ Veritabanı başarıyla başlatıldı.")
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                email VARCHAR(255) UNIQUE NOT NULL,
+                password_hash VARCHAR(255) NOT NULL,
+                phone VARCHAR(20),
+                is_admin BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                last_login TIMESTAMP,
+                is_active BOOLEAN DEFAULT TRUE
+            )
+        ''')
+        
+        # Login logları
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS login_logs (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id),
+                ip_address VARCHAR(45),
+                user_agent TEXT,
+                login_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                success BOOLEAN
+            )
+        ''')
+        
+        # Admin kullanıcıyı oluştur
+        admin_email = os.getenv('ADMIN_EMAIL', 'admin@yolo.com')
+        admin_password = os.getenv('ADMIN_PASSWORD', 'Admin123!')
+        
+        cur.execute("SELECT id FROM users WHERE email = %s", (admin_email,))
+        admin_exists = cur.fetchone()
+        
+        if not admin_exists:
+            hashed = bcrypt.hashpw(admin_password.encode('utf-8'), bcrypt.gensalt())
+            cur.execute('''
+                INSERT INTO users (email, password_hash, is_admin)
+                VALUES (%s, %s, %s)
+            ''', (admin_email, hashed.decode('utf-8'), True))
+            print(f"✅ Admin kullanıcı oluşturuldu: {admin_email}")
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        print("✅ Veritabanı başarıyla başlatıldı.")
+    except Exception as e:
+        print(f"❌ Veritabanı hatası: {e}")
+        raise e
 
 def get_user_by_email(email):
     """Email ile kullanıcı ara"""
