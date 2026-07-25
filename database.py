@@ -5,10 +5,19 @@ import bcrypt
 from datetime import datetime
 
 def get_db_connection():
-    """Veritabanı bağlantısı - Render için"""
+    """Veritabanı bağlantısı - ÖNCE DATABASE_URL"""
+    # 1. Önce DATABASE_URL dene (Render'da)
     database_url = os.getenv('DATABASE_URL')
     if database_url:
-        return psycopg2.connect(database_url, cursor_factory=RealDictCursor)
+        print(f"✅ DATABASE_URL bulundu: {database_url[:50]}...")
+        try:
+            return psycopg2.connect(database_url, cursor_factory=RealDictCursor)
+        except Exception as e:
+            print(f"❌ DATABASE_URL ile bağlanılamadı: {e}")
+            raise e
+    
+    # 2. Yoksa yerel bağlantı dene
+    print("⚠️ DATABASE_URL yok, yerel bağlantı deneniyor...")
     return psycopg2.connect(
         host=os.getenv('DB_HOST', 'localhost'),
         database=os.getenv('DB_NAME', 'yolo_userdb'),
@@ -18,58 +27,73 @@ def get_db_connection():
     )
 
 def init_db():
-    """Tabloları oluştur ve admin ekle"""
-    conn = get_db_connection()
-    cur = conn.cursor()
-    
-    # Users tablosu
-    cur.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id SERIAL PRIMARY KEY,
-            email VARCHAR(255) UNIQUE NOT NULL,
-            password_hash VARCHAR(255) NOT NULL,
-            phone VARCHAR(20),
-            is_admin BOOLEAN DEFAULT FALSE,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            is_active BOOLEAN DEFAULT TRUE
-        )
-    ''')
-    
-    # Admin kullanıcı
-    admin_email = os.getenv('ADMIN_EMAIL', 'admin@yolo.com')
-    admin_password = os.getenv('ADMIN_PASSWORD', 'Admin123!')
-    
-    cur.execute("SELECT id FROM users WHERE email = %s", (admin_email,))
-    if not cur.fetchone():
-        hashed = bcrypt.hashpw(admin_password.encode('utf-8'), bcrypt.gensalt())
+    """Tabloları oluştur"""
+    try:
+        print("🔄 Veritabanı başlatılıyor...")
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # Users tablosu
         cur.execute('''
-            INSERT INTO users (email, password_hash, is_admin)
-            VALUES (%s, %s, %s)
-        ''', (admin_email, hashed.decode('utf-8'), True))
-        print(f"✅ Admin oluşturuldu: {admin_email}")
-    
-    conn.commit()
-    cur.close()
-    conn.close()
-    print("✅ Veritabanı hazır")
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                email VARCHAR(255) UNIQUE NOT NULL,
+                password_hash VARCHAR(255) NOT NULL,
+                phone VARCHAR(20),
+                is_admin BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                is_active BOOLEAN DEFAULT TRUE
+            )
+        ''')
+        
+        # Admin kullanıcı
+        admin_email = os.getenv('ADMIN_EMAIL', 'admin@yolo.com')
+        admin_password = os.getenv('ADMIN_PASSWORD', 'Admin123!')
+        
+        cur.execute("SELECT id FROM users WHERE email = %s", (admin_email,))
+        if not cur.fetchone():
+            hashed = bcrypt.hashpw(admin_password.encode('utf-8'), bcrypt.gensalt())
+            cur.execute('''
+                INSERT INTO users (email, password_hash, is_admin)
+                VALUES (%s, %s, %s)
+            ''', (admin_email, hashed.decode('utf-8'), True))
+            print(f"✅ Admin oluşturuldu: {admin_email}")
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        print("✅ Veritabanı başarıyla başlatıldı.")
+    except Exception as e:
+        print(f"❌ Veritabanı hatası: {e}")
+        import traceback
+        traceback.print_exc()
+        raise e
 
 def get_user_by_email(email):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM users WHERE email = %s", (email,))
-    user = cur.fetchone()
-    cur.close()
-    conn.close()
-    return user
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM users WHERE email = %s", (email,))
+        user = cur.fetchone()
+        cur.close()
+        conn.close()
+        return user
+    except Exception as e:
+        print(f"❌ get_user_by_email hatası: {e}")
+        return None
 
 def get_all_users():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT id, email, phone, is_admin, created_at FROM users WHERE is_active = TRUE")
-    users = cur.fetchall()
-    cur.close()
-    conn.close()
-    return users
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT id, email, phone, is_admin, created_at FROM users WHERE is_active = TRUE")
+        users = cur.fetchall()
+        cur.close()
+        conn.close()
+        return users
+    except Exception as e:
+        print(f"❌ get_all_users hatası: {e}")
+        return []
 
 def create_user(email, password_hash, phone, is_admin=False):
     conn = get_db_connection()
