@@ -10,12 +10,19 @@ def get_db_connection():
     database_url = os.getenv('DATABASE_URL')
     
     if database_url:
-        # Render PostgreSQL bağlantısı
-        print(f"✅ Render PostgreSQL kullanılıyor")
-        return psycopg2.connect(database_url, cursor_factory=RealDictCursor)
+        try:
+            # Render PostgreSQL bağlantısı
+            print(f"✅ Render PostgreSQL kullanılıyor")
+            # URL'de sslmode varsa ekle
+            if '?' not in database_url:
+                database_url += '?sslmode=require'
+            return psycopg2.connect(database_url, cursor_factory=RealDictCursor)
+        except Exception as e:
+            print(f"❌ Render PostgreSQL bağlantı hatası: {e}")
+            raise e
     else:
         # Yerel geliştirme için
-        print(f"✅ Yerel PostgreSQL kullanılıyor")
+        print(f"⚠️ DATABASE_URL bulunamadı, yerel bağlantı deneniyor")
         return psycopg2.connect(
             host=os.getenv('DB_HOST', 'localhost'),
             database=os.getenv('DB_NAME', 'yolo_userdb'),
@@ -27,6 +34,7 @@ def get_db_connection():
 def init_db():
     """Veritabanı tablolarını oluştur"""
     try:
+        print("🔄 Veritabanı başlatılıyor...")
         conn = get_db_connection()
         cur = conn.cursor()
         
@@ -78,17 +86,23 @@ def init_db():
         print("✅ Veritabanı başarıyla başlatıldı.")
     except Exception as e:
         print(f"❌ Veritabanı hatası: {e}")
+        import traceback
+        traceback.print_exc()
         raise e
 
 def get_user_by_email(email):
     """Email ile kullanıcı ara"""
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM users WHERE email = %s", (email,))
-    user = cur.fetchone()
-    cur.close()
-    conn.close()
-    return user
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM users WHERE email = %s", (email,))
+        user = cur.fetchone()
+        cur.close()
+        conn.close()
+        return user
+    except Exception as e:
+        print(f"❌ get_user_by_email hatası: {e}")
+        return None
 
 def create_user(email, password_hash, phone, is_admin=False):
     """Yeni kullanıcı oluştur"""
@@ -129,27 +143,34 @@ def update_password(user_id, new_password_hash):
 
 def get_all_users():
     """Tüm aktif kullanıcıları getir"""
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute('''
-        SELECT id, email, phone, is_admin, created_at, updated_at, last_login 
-        FROM users 
-        WHERE is_active = TRUE
-        ORDER BY created_at DESC
-    ''')
-    users = cur.fetchall()
-    cur.close()
-    conn.close()
-    return users
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute('''
+            SELECT id, email, phone, is_admin, created_at, updated_at, last_login 
+            FROM users 
+            WHERE is_active = TRUE
+            ORDER BY created_at DESC
+        ''')
+        users = cur.fetchall()
+        cur.close()
+        conn.close()
+        return users
+    except Exception as e:
+        print(f"❌ get_all_users hatası: {e}")
+        return []
 
 def log_login(user_id, ip, user_agent, success):
     """Login girişimini logla"""
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute('''
-        INSERT INTO login_logs (user_id, ip_address, user_agent, success)
-        VALUES (%s, %s, %s, %s)
-    ''', (user_id, ip, user_agent, success))
-    conn.commit()
-    cur.close()
-    conn.close()
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute('''
+            INSERT INTO login_logs (user_id, ip_address, user_agent, success)
+            VALUES (%s, %s, %s, %s)
+        ''', (user_id, ip, user_agent, success))
+        conn.commit()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"❌ log_login hatası: {e}")
