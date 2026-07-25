@@ -1,14 +1,10 @@
 import os
+import sys
 from flask import Flask, render_template, jsonify
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from dotenv import load_dotenv
 from datetime import timedelta
-
-# Kendi modüllerimiz
-from database import init_db
-from auth import auth_bp
-from admin import admin_bp
 
 # .env dosyasını yükle
 load_dotenv()
@@ -25,37 +21,66 @@ app.config['JWT_COOKIE_CSRF_PROTECT'] = True
 app.config['JWT_ACCESS_COOKIE_PATH'] = '/'
 
 # CORS ayarları
-CORS(app, origins=["http://localhost:5000", "http://localhost:3000", "https://yolo-analiz.onrender.com"], supports_credentials=True)
+CORS(app, origins=["*"], supports_credentials=True)
 
 # JWT Manager
 jwt = JWTManager(app)
 
-# Blueprint'leri kaydet
-app.register_blueprint(auth_bp, url_prefix='/api/auth')
-app.register_blueprint(admin_bp, url_prefix='/api/admin')
-
-# Veritabanını başlat
+# Veritabanı bağlantısını dene
 try:
+    from database import init_db
+    from auth import auth_bp
+    from admin import admin_bp
+    
+    # Blueprint'leri kaydet
+    app.register_blueprint(auth_bp, url_prefix='/api/auth')
+    app.register_blueprint(admin_bp, url_prefix='/api/admin')
+    
+    # Veritabanını başlat
     init_db()
+    print("✅ Veritabanı başarıyla başlatıldı.")
 except Exception as e:
-    print(f"⚠️ Veritabanı başlatılamadı: {e}")
-    print("🔧 DATABASE_URL kontrol edin!")
+    print(f"❌ HATA: {e}")
+    import traceback
+    traceback.print_exc()
 
 # Ana sayfa
 @app.route('/')
 def home():
-    return render_template('index.html') if os.path.exists('templates/index.html') else jsonify({"status": "YOLO Analiz Servisi Aktif!"})
+    return jsonify({
+        "status": "online",
+        "message": "YOLO Analiz Servisi Aktif!",
+        "endpoints": {
+            "login": "/api/auth/login-page",
+            "health": "/health",
+            "dashboard": "/dashboard"
+        }
+    })
 
 # Health check
 @app.route('/health')
 def health():
-    return jsonify({"status": "healthy", "message": "Admin Panel API Çalışıyor!"})
+    return jsonify({
+        "status": "healthy",
+        "message": "Admin Panel API Çalışıyor!",
+        "database": "connected" if os.getenv('DATABASE_URL') else "not configured"
+    })
+
+# Login sayfası (doğrudan erişim)
+@app.route('/login')
+def login_redirect():
+    return render_template('login.html')
 
 # Dashboard sayfası
 @app.route('/dashboard')
 def dashboard():
-    return render_template('dashboard.html')
+    try:
+        return render_template('dashboard.html')
+    except:
+        return jsonify({"error": "Dashboard template not found"}), 404
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    print(f"🚀 Server starting on port {port}")
+    print(f"🔗 Health check: http://0.0.0.0:{port}/health")
+    app.run(host="0.0.0.0", port=port)
