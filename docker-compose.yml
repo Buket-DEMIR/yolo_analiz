@@ -1,34 +1,50 @@
 version: '3.8'
 
 services:
-  db:
-    image: postgres:15-alpine
-    container_name: panel_postgres_db
+  postgres:
+    image: postgres:15
+    container_name: yolo_postgres
     environment:
-      POSTGRES_USER: panel_admin
-      POSTGRES_PASSWORD: CokGuvenliDbSifresi2026!
-      POSTGRES_DB: panel_yonetim
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: yolo_userdb
     ports:
       - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - yolo_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   web:
     build: .
-    container_name: panel_web_app
+    container_name: yolo_web
     ports:
       - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_NAME: yolo_userdb
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      JWT_SECRET_KEY: gucluJwtSecretKey123456
+      ADMIN_EMAIL: admin@yolo.com
+      ADMIN_PASSWORD: Admin123!
     volumes:
       - .:/app
-    environment:
-      - FLASK_ENV=production
-      - SECRET_KEY=CokGizliVeGuvenliBirAnahtar123!
-      - DB_HOST=db
-      - DB_NAME=panel_yonetim
-      - DB_USER=panel_admin
-      - DB_PASSWORD=CokGuvenliDbSifresi2026!
-    depends_on:
-      - db
+    networks:
+      - yolo_network
+    restart: unless-stopped
 
 volumes:
   postgres_data:
+
+networks:
+  yolo_network:
