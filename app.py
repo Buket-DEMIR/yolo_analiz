@@ -1,114 +1,33 @@
 import os
-import sys
-from flask import Flask, render_template, jsonify
+from flask import Flask, jsonify, render_template
 from flask_cors import CORS
-from flask_jwt_extended import JWTManager
 from dotenv import load_dotenv
-from datetime import timedelta
 
 load_dotenv()
 
 app = Flask(__name__)
+CORS(app)
 
-app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'gucluJwtSecretKey123456')
-app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
-app.config['JWT_TOKEN_LOCATION'] = ['cookies']
-app.config['JWT_COOKIE_SECURE'] = False
-app.config['JWT_COOKIE_CSRF_PROTECT'] = True
-app.config['JWT_ACCESS_COOKIE_PATH'] = '/'
-
-CORS(app, origins=["*"], supports_credentials=True)
-jwt = JWTManager(app)
-
-# Blueprint'leri import et ve kaydet
-try:
-    from auth import auth_bp
-    from admin import admin_bp
-    
-    app.register_blueprint(auth_bp, url_prefix='/api/auth')
-    app.register_blueprint(admin_bp, url_prefix='/api/admin')
-    print("✅ Blueprint'ler başarıyla kaydedildi.")
-except Exception as e:
-    print(f"❌ Blueprint hatası: {e}")
-
-# Veritabanı
-try:
-    from database import init_db
-    init_db()
-    print("✅ Veritabanı başarıyla başlatıldı.")
-except Exception as e:
-    print(f"❌ Veritabanı hatası: {e}")
-
+# Basit sağlık kontrolü
 @app.route('/')
 def home():
     return jsonify({
         "status": "online",
-        "message": "YOLO Analiz Servisi Aktif!",
+        "message": "YOLO Analiz Servisi Aktif",
         "endpoints": {
             "login": "/login",
-            "login_api": "/api/auth/login",
-            "health": "/health",
-            "dashboard": "/dashboard"
+            "health": "/health"
         }
     })
 
 @app.route('/health')
 def health():
-    return jsonify({"status": "healthy", "message": "Admin Panel API Çalışıyor!"})
+    return jsonify({"status": "healthy"})
 
 @app.route('/login')
-def login_page():
-    try:
-        return render_template('login.html')
-    except Exception as e:
-        return jsonify({"error": f"Login template error: {str(e)}"}), 404
-
-@app.route('/dashboard')
-def dashboard():
-    try:
-        return render_template('dashboard.html')
-    except Exception as e:
-        return jsonify({"error": f"Dashboard template error: {str(e)}"}), 404
-
-# app.py'nin en sonuna, if __name__ == "__main__": kısmından önce ekle
-def create_admin_user():
-    try:
-        from database import get_db_connection
-        import bcrypt
-        import os
-        
-        conn = get_db_connection()
-        cur = conn.cursor()
-        
-        admin_email = os.getenv('ADMIN_EMAIL', 'admin@yolo.com')
-        admin_password = os.getenv('ADMIN_PASSWORD', 'Admin123!')
-        
-        cur.execute("SELECT id FROM users WHERE email = %s", (admin_email,))
-        admin_exists = cur.fetchone()
-        
-        if not admin_exists:
-            hashed = bcrypt.hashpw(admin_password.encode('utf-8'), bcrypt.gensalt())
-            cur.execute('''
-                INSERT INTO users (email, password_hash, is_admin)
-                VALUES (%s, %s, %s)
-            ''', (admin_email, hashed.decode('utf-8'), True))
-            conn.commit()
-            print(f"✅ Admin kullanıcı oluşturuldu: {admin_email}")
-        else:
-            print(f"✅ Admin kullanıcı zaten var: {admin_email}")
-        
-        cur.close()
-        conn.close()
-    except Exception as e:
-        print(f"❌ Admin oluşturma hatası: {e}")
-
-# init_db() çağrısından sonra bunu ekle
-init_db()
-create_admin_user()  # <-- BUNU EKLE
+def login():
+    return render_template('login.html')
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    print(f"🚀 Server starting on port {port}")
-    print(f"🔗 Health check: /health")
     app.run(host="0.0.0.0", port=port)
-    
