@@ -19,38 +19,24 @@ def add_user():
     password = data.get('password')
     phone = data.get('phone', '')
     
-    if not email or not password:
-        return jsonify({'error': 'Email ve şifre gereklidir'}), 400
-    
-    existing_user = get_user_by_email(email)
-    if existing_user:
+    if get_user_by_email(email):
         return jsonify({'error': 'Bu email zaten kullanılıyor'}), 409
     
     hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-    user_id = create_user(email, hashed.decode('utf-8'), phone, is_admin=False)
-    
-    return jsonify({
-        'success': True,
-        'message': 'Kullanıcı başarıyla eklendi',
-        'user_id': user_id
-    }), 201
+    user_id = create_user(email, hashed.decode('utf-8'), phone)
+    return jsonify({'success': True, 'user_id': user_id}), 201
 
 @admin_bp.route('/users/<int:user_id>', methods=['DELETE'])
 @jwt_required()
 def remove_user(user_id):
     delete_user(user_id)
-    return jsonify({'success': True, 'message': 'Kullanıcı silindi'}), 200
+    return jsonify({'success': True}), 200
 
 @admin_bp.route('/users/<int:user_id>/password', methods=['PUT'])
 @jwt_required()
 def change_password(user_id):
     data = request.get_json()
     new_password = data.get('new_password')
-    
-    if not new_password:
-        return jsonify({'error': 'Yeni şifre gereklidir'}), 400
-    
     hashed = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
     update_password(user_id, hashed.decode('utf-8'))
-    
-    return jsonify({'success': True, 'message': 'Şifre başarıyla güncellendi'}), 200
+    return jsonify({'success': True}), 200

@@ -1,34 +1,35 @@
 import os
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify
+from flask_cors import CORS
+from flask_jwt_extended import JWTManager
+from dotenv import load_dotenv
+from datetime import timedelta
+
+load_dotenv()
 
 app = Flask(__name__)
 
-# Basit login API'si (veritabanı yok, test için)
-@app.route('/api/auth/login', methods=['POST'])
-def login():
-    data = request.get_json()
-    email = data.get('email')
-    password = data.get('password')
-    
-    # Test amaçlı: admin@yolo.com / Admin123!
-    if email == 'admin@yolo.com' and password == 'Admin123!':
-        return jsonify({
-            'success': True,
-            'message': 'Giriş başarılı',
-            'user': {
-                'email': email,
-                'is_admin': True
-            }
-        })
-    else:
-        return jsonify({
-            'success': False,
-            'error': 'Geçersiz email veya şifre'
-        }), 401
+app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'gucluJwtSecretKey123456')
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
+app.config['JWT_TOKEN_LOCATION'] = ['cookies']
+app.config['JWT_COOKIE_SECURE'] = False
+
+CORS(app, origins=["*"], supports_credentials=True)
+jwt = JWTManager(app)
+
+# Veritabanı
+from database import init_db
+init_db()
+
+# Blueprint'ler
+from auth import auth_bp
+from admin import admin_bp
+app.register_blueprint(auth_bp, url_prefix='/api/auth')
+app.register_blueprint(admin_bp, url_prefix='/api/admin')
 
 @app.route('/')
 def home():
-    return jsonify({"status": "online", "message": "YOLO Analiz Servisi"})
+    return jsonify({"status": "online", "message": "YOLO Admin Panel"})
 
 @app.route('/health')
 def health():
@@ -40,7 +41,7 @@ def login_page():
 
 @app.route('/dashboard')
 def dashboard():
-    return jsonify({"message": "Dashboard - Giriş yaptınız!"})
+    return render_template('dashboard.html')
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
