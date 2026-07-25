@@ -70,8 +70,45 @@ def dashboard():
     except Exception as e:
         return jsonify({"error": f"Dashboard template error: {str(e)}"}), 404
 
+# app.py'nin en sonuna, if __name__ == "__main__": kısmından önce ekle
+def create_admin_user():
+    try:
+        from database import get_db_connection
+        import bcrypt
+        import os
+        
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        admin_email = os.getenv('ADMIN_EMAIL', 'admin@yolo.com')
+        admin_password = os.getenv('ADMIN_PASSWORD', 'Admin123!')
+        
+        cur.execute("SELECT id FROM users WHERE email = %s", (admin_email,))
+        admin_exists = cur.fetchone()
+        
+        if not admin_exists:
+            hashed = bcrypt.hashpw(admin_password.encode('utf-8'), bcrypt.gensalt())
+            cur.execute('''
+                INSERT INTO users (email, password_hash, is_admin)
+                VALUES (%s, %s, %s)
+            ''', (admin_email, hashed.decode('utf-8'), True))
+            conn.commit()
+            print(f"✅ Admin kullanıcı oluşturuldu: {admin_email}")
+        else:
+            print(f"✅ Admin kullanıcı zaten var: {admin_email}")
+        
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"❌ Admin oluşturma hatası: {e}")
+
+# init_db() çağrısından sonra bunu ekle
+init_db()
+create_admin_user()  # <-- BUNU EKLE
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     print(f"🚀 Server starting on port {port}")
     print(f"🔗 Health check: /health")
     app.run(host="0.0.0.0", port=port)
+    
