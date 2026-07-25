@@ -1,33 +1,208 @@
 <!DOCTYPE html>
-<html>
+<html lang="tr">
 <head>
-    <title>YOLO Admin</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YOLO Admin - Giriş</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
         body {
-            font-family: Arial, sans-serif;
-            background: #0a0a0a;
-            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            margin: 0;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
         }
-        .box {
-            background: #1a1a2e;
-            padding: 40px;
-            border-radius: 12px;
+        .login-container {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(20px);
+            border-radius: 30px;
+            padding: 60px 50px;
+            width: 100%;
+            max-width: 420px;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+            animation: slideUp 0.8s ease-out;
+        }
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .login-header {
             text-align: center;
+            margin-bottom: 40px;
         }
-        h1 { color: #00d26a; }
-        p { color: #888; }
+        .login-header h1 {
+            color: #00d26a;
+            font-size: 28px;
+            font-weight: 700;
+        }
+        .login-header p {
+            color: rgba(255,255,255,0.5);
+            font-size: 14px;
+            margin-top: 8px;
+        }
+        .form-group {
+            margin-bottom: 25px;
+        }
+        .form-group label {
+            display: block;
+            color: rgba(255,255,255,0.7);
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 14px 16px;
+            background: rgba(255,255,255,0.08);
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 14px;
+            color: #fff;
+            font-size: 15px;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+        .form-group input:focus {
+            border-color: #00d26a;
+            background: rgba(255,255,255,0.12);
+            box-shadow: 0 0 20px rgba(0,210,106,0.1);
+        }
+        .form-group input::placeholder {
+            color: rgba(255,255,255,0.3);
+        }
+        .login-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #00d26a, #00a84d);
+            border: none;
+            border-radius: 14px;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0,210,106,0.3);
+        }
+        .login-btn:active {
+            transform: scale(0.98);
+        }
+        .login-error {
+            background: rgba(255,0,0,0.15);
+            border: 1px solid rgba(255,0,0,0.3);
+            color: #ff6b6b;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 14px;
+            margin-top: 15px;
+            display: none;
+        }
+        .login-success {
+            background: rgba(0,210,106,0.15);
+            border: 1px solid rgba(0,210,106,0.3);
+            color: #00d26a;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 14px;
+            margin-top: 15px;
+            display: none;
+        }
+        .login-footer {
+            text-align: center;
+            margin-top: 25px;
+            color: rgba(255,255,255,0.3);
+            font-size: 12px;
+        }
     </style>
 </head>
 <body>
-    <div class="box">
-        <h1>🚀 YOLO Admin</h1>
-        <p>Login sayfası çalışıyor!</p>
-        <p style="font-size:12px;color:#555;">Test sayfası - Veritabanı yok</p>
+    <div class="login-container">
+        <div class="login-header">
+            <h1>🔐 YOLO Admin</h1>
+            <p>Yönetim paneline giriş yapın</p>
+        </div>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="email">E-posta Adresi</label>
+                <input type="email" id="email" placeholder="admin@yolo.com" value="admin@yolo.com">
+            </div>
+
+            <div class="form-group">
+                <label for="password">Şifre</label>
+                <input type="password" id="password" placeholder="••••••••" value="Admin123!">
+            </div>
+
+            <button type="submit" class="login-btn">Giriş Yap</button>
+
+            <div class="login-error" id="loginError"></div>
+            <div class="login-success" id="loginSuccess"></div>
+        </form>
+
+        <div class="login-footer">
+            YOLO Analiz Sistemi v2.0 • Güvenli Giriş
+        </div>
     </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('loginError');
+            const successDiv = document.getElementById('loginSuccess');
+            
+            errorDiv.style.display = 'none';
+            successDiv.style.display = 'none';
+            
+            try {
+                console.log('🔐 Login isteği gönderiliyor...', email);
+                
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                console.log('📡 Response:', response.status, data);
+                
+                if (response.ok && data.success) {
+                    successDiv.textContent = '✅ Giriş başarılı! Yönlendiriliyorsunuz...';
+                    successDiv.style.display = 'block';
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 1500);
+                } else {
+                    errorDiv.textContent = '❌ ' + (data.error || 'Geçersiz email veya şifre!');
+                    errorDiv.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('❌ Hata:', error);
+                errorDiv.textContent = '❌ Sunucu bağlantı hatası: ' + error.message;
+                errorDiv.style.display = 'block';
+            }
+        });
+    </script>
 </body>
 </html>
