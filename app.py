@@ -1,24 +1,11 @@
 import os
-from flask import Flask, jsonify, render_template
-from flask_cors import CORS
-from dotenv import load_dotenv
-
-load_dotenv()
+from flask import Flask, render_template, jsonify
 
 app = Flask(__name__)
-CORS(app)
 
-# Basit sağlık kontrolü
 @app.route('/')
 def home():
-    return jsonify({
-        "status": "online",
-        "message": "YOLO Analiz Servisi Aktif",
-        "endpoints": {
-            "login": "/login",
-            "health": "/health"
-        }
-    })
+    return jsonify({"status": "online", "message": "YOLO Analiz Servisi"})
 
 @app.route('/health')
 def health():
